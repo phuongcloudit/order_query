@@ -1,0 +1,207 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>order_query by glebm</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/github-light.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1>order_query</h1>
+        <p>Find next / previous Active Record(s) in one query</p>
+
+        <p class="view"><a href="https://github.com/glebm/order_query">View the Project on GitHub <small>glebm/order_query</small></a></p>
+
+
+        <ul>
+          <li><a href="https://github.com/glebm/order_query/zipball/master">Download <strong>ZIP File</strong></a></li>
+          <li><a href="https://github.com/glebm/order_query/tarball/master">Download <strong>TAR Ball</strong></a></li>
+          <li><a href="https://github.com/glebm/order_query">View On <strong>GitHub</strong></a></li>
+        </ul>
+      </header>
+      <section>
+        <h1>
+<a id="order_query---" class="anchor" href="#order_query---" aria-hidden="true"><span class="octicon octicon-link"></span></a>order_query <a href="http://travis-ci.org/glebm/order_query"><img src="http://img.shields.io/travis/glebm/order_query.svg" alt="Build Status"></a> <a href="https://codeclimate.com/github/glebm/order_query"><img src="http://img.shields.io/codeclimate/github/glebm/order_query.svg" alt="Code Climate"></a> <a href="https://codeclimate.com/github/glebm/order_query"><img src="https://codeclimate.com/github/glebm/order_query/badges/coverage.svg" alt="Coverage Status"></a>
+</h1>
+
+<p><a href="http://use-the-index-luke.com/no-offset">
+  <img src="http://use-the-index-luke.com/img/no-offset.q200.png" alt="100% offset-free" align="right" width="106" height="106">
+</a></p>
+
+<p>This gem finds the next or previous record(s) relative to the current one efficiently using <a href="http://use-the-index-luke.com/no-offset">keyset pagination</a>, e.g. for navigation or infinite scroll.</p>
+
+<h2>
+<a id="installation" class="anchor" href="#installation" aria-hidden="true"><span class="octicon octicon-link"></span></a>Installation</h2>
+
+<p>Add to Gemfile:</p>
+
+<div class="highlight highlight-ruby"><pre><span class="pl-k">gem</span> <span class="pl-s"><span class="pl-pds">'</span>order_query<span class="pl-pds">'</span></span>, <span class="pl-s"><span class="pl-pds">'</span>~&gt; 0.3.2<span class="pl-pds">'</span></span></pre></div>
+
+<h2>
+<a id="usage" class="anchor" href="#usage" aria-hidden="true"><span class="octicon octicon-link"></span></a>Usage</h2>
+
+<p>Define a named list of attributes to order by with <code>order_query(name, *order)</code>:</p>
+
+<div class="highlight highlight-ruby"><pre><span class="pl-k">class</span> <span class="pl-en">Post<span class="pl-e"> &lt; ActiveRecord::Base</span></span>
+  <span class="pl-k">include</span> <span class="pl-c1">OrderQuery</span>
+  order_query <span class="pl-c1">:order_home</span>,
+    [<span class="pl-c1">:pinned</span>, [<span class="pl-c1">true</span>, <span class="pl-c1">false</span>]],
+    [<span class="pl-c1">:published_at</span>, <span class="pl-c1">:desc</span>]
+<span class="pl-k">end</span></pre></div>
+
+<p>Each attributes is specified as:</p>
+
+<ol>
+<li>Attribute name.</li>
+<li>Optionally, values to order by, such as <code>%w(high medium low)</code> or <code>[true, false]</code>.</li>
+<li>Sort direction, <code>:asc</code> or <code>:desc</code>. Default: <code>:asc</code>; <code>:desc</code> when values to order by are specified.</li>
+<li>Options:</li>
+</ol>
+
+<table>
+<thead>
+<tr>
+<th>option</th>
+<th>description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>unique</td>
+<td>Unique attribute. Default: <code>true</code> for primary key, <code>false</code> otherwise.</td>
+</tr>
+<tr>
+<td>sql</td>
+<td>Customize column SQL.</td>
+</tr>
+</tbody>
+</table>
+
+<p>If no unique column is specified, <code>[primary_key, :asc]</code> is used. Unique column must be last.</p>
+
+<h3>
+<a id="scopes-for-order-by" class="anchor" href="#scopes-for-order-by" aria-hidden="true"><span class="octicon octicon-link"></span></a>Scopes for <code>ORDER BY</code>
+</h3>
+
+<div class="highlight highlight-ruby"><pre><span class="pl-c1">Post</span>.published.order_home         <span class="pl-c">#=&gt; #&lt;ActiveRecord::Relation&gt;</span>
+<span class="pl-c1">Post</span>.published.order_home_reverse <span class="pl-c">#=&gt; #&lt;ActiveRecord::Relation&gt;</span></pre></div>
+
+<h3>
+<a id="before--after-previous--next-and-position" class="anchor" href="#before--after-previous--next-and-position" aria-hidden="true"><span class="octicon octicon-link"></span></a>Before / after, previous / next, and position</h3>
+
+<p>First, get an <code>OrderQuery::Point</code> for the record:</p>
+
+<div class="highlight highlight-ruby"><pre>p <span class="pl-k">=</span> <span class="pl-c1">Post</span>.published.order_home_at(<span class="pl-c1">Post</span>.find(<span class="pl-c1">31</span>)) <span class="pl-c">#=&gt; #&lt;OrderQuery::Point&gt;</span></pre></div>
+
+<p>It exposes these finder methods:</p>
+
+<div class="highlight highlight-ruby"><pre>p.before   <span class="pl-c">#=&gt; #&lt;ActiveRecord::Relation&gt;</span>
+p.after    <span class="pl-c">#=&gt; #&lt;ActiveRecord::Relation&gt;</span>
+p.previous <span class="pl-c">#=&gt; #&lt;Post&gt;</span>
+p.next     <span class="pl-c">#=&gt; #&lt;Post&gt;</span>
+p.position <span class="pl-c">#=&gt; 5</span></pre></div>
+
+<p>Looping to the first / last record is enabled for <code>next</code> / <code>previous</code> by default. Pass <code>false</code> to disable:</p>
+
+<div class="highlight highlight-ruby"><pre>p <span class="pl-k">=</span> <span class="pl-c1">Post</span>.order_home_at(<span class="pl-c1">Post</span>.order_home.first)
+p.previous        <span class="pl-c">#=&gt; #&lt;Post&gt;</span>
+p.previous(<span class="pl-c1">false</span>) <span class="pl-c">#=&gt; nil</span></pre></div>
+
+<p>Even with looping, <code>nil</code> will be returned if there is only one record.</p>
+
+<p>You can also get an <code>OrderQuery::Point</code> from an instance and a scope:</p>
+
+<div class="highlight highlight-ruby"><pre>posts <span class="pl-k">=</span> <span class="pl-c1">Post</span>.published
+post  <span class="pl-k">=</span> posts.find(<span class="pl-c1">42</span>)
+post.order_home(posts) <span class="pl-c">#=&gt; #&lt;OrderQuery::Point&gt;</span></pre></div>
+
+<h3>
+<a id="dynamic-columns" class="anchor" href="#dynamic-columns" aria-hidden="true"><span class="octicon octicon-link"></span></a>Dynamic columns</h3>
+
+<p>Query with dynamic order columns using the <code>seek(*order)</code> class method:</p>
+
+<div class="highlight highlight-ruby"><pre>space <span class="pl-k">=</span> <span class="pl-c1">Post</span>.visible.seek([<span class="pl-c1">:id</span>, <span class="pl-c1">:desc</span>]) <span class="pl-c">#=&gt; #&lt;OrderQuery::Space&gt;</span></pre></div>
+
+<p>This returns an <code>OrderQuery::Space</code> that exposes these methods:</p>
+
+<div class="highlight highlight-ruby"><pre>space.scope           <span class="pl-c">#=&gt; #&lt;ActiveRecord::Relation&gt;</span>
+space.scope_reverse   <span class="pl-c">#=&gt; #&lt;ActiveRecord::Relation&gt;</span>
+space.first           <span class="pl-c">#=&gt; scope.first</span>
+space.last            <span class="pl-c">#=&gt; scope_reverse.first</span>
+space.at(<span class="pl-c1">Post</span>.first)  <span class="pl-c">#=&gt; #&lt;OrderQuery::Point&gt;</span></pre></div>
+
+<p><code>OrderQuery::Space</code> is also available for defined order_queries:</p>
+
+<div class="highlight highlight-ruby"><pre><span class="pl-c1">Post</span>.visible.order_home_space <span class="pl-c">#=&gt; #&lt;OrderQuery::Space&gt;</span></pre></div>
+
+<p>Alternatively, get an <code>OrderQuery::Point</code> using the <code>seek(scope, *order)</code> instance method:</p>
+
+<div class="highlight highlight-ruby"><pre><span class="pl-c1">Post</span>.find(<span class="pl-c1">42</span>).seek(<span class="pl-c1">Post</span>.visible, [<span class="pl-c1">:id</span>, <span class="pl-c1">:desc</span>]) <span class="pl-c">#=&gt; #&lt;OrderQuery::Point&gt;</span>
+<span class="pl-c"># scope defaults to Post.all</span>
+<span class="pl-c1">Post</span>.find(<span class="pl-c1">42</span>).seek([<span class="pl-c1">:id</span>, <span class="pl-c1">:desc</span>]) <span class="pl-c">#=&gt; #&lt;OrderQuery::Point&gt;</span></pre></div>
+
+<h3>
+<a id="advanced-example" class="anchor" href="#advanced-example" aria-hidden="true"><span class="octicon octicon-link"></span></a>Advanced example</h3>
+
+<div class="highlight highlight-ruby"><pre><span class="pl-k">class</span> <span class="pl-en">Post<span class="pl-e"> &lt; ActiveRecord::Base</span></span>
+  <span class="pl-k">include</span> <span class="pl-c1">OrderQuery</span>
+  order_query <span class="pl-c1">:order_home</span>,
+    <span class="pl-c"># For an array of order values, default direction is :desc</span>
+    <span class="pl-c"># High-priority issues will be ordered first in this example</span>
+    [<span class="pl-c1">:priority</span>, <span class="pl-s"><span class="pl-pds">%w(</span>high medium low<span class="pl-pds">)</span></span>],
+    <span class="pl-c"># A method and custom SQL can be used instead of an attribute</span>
+    [<span class="pl-c1">:valid_votes_count</span>, <span class="pl-c1">:desc</span>, <span class="pl-c1">sql:</span> <span class="pl-s"><span class="pl-pds">'</span>(votes - suspicious_votes)<span class="pl-pds">'</span></span>],
+    <span class="pl-c"># Default sort order for non-array columns is :asc, just like SQL</span>
+    [<span class="pl-c1">:updated_at</span>, <span class="pl-c1">:desc</span>],
+    <span class="pl-c"># pass unique: true for unique attributes to get more optimized queries</span>
+    <span class="pl-c"># unique is true by default for primary_key</span>
+    [<span class="pl-c1">:id</span>, <span class="pl-c1">:desc</span>]
+  <span class="pl-k">def</span> <span class="pl-en">valid_votes_count</span>
+    votes <span class="pl-k">-</span> suspicious_votes
+  <span class="pl-k">end</span>
+<span class="pl-k">end</span></pre></div>
+
+<h2>
+<a id="how-it-works" class="anchor" href="#how-it-works" aria-hidden="true"><span class="octicon octicon-link"></span></a>How it works</h2>
+
+<p>Internally this gem builds a query that depends on the current record's values and looks like this:</p>
+
+<div class="highlight highlight-sql"><pre><span class="pl-c">-- Current post: pinned=true published_at='2014-03-21 15:01:35.064096' id=9</span>
+<span class="pl-k">SELECT</span> <span class="pl-s"><span class="pl-pds">"</span>posts<span class="pl-pds">"</span></span>.<span class="pl-k">*</span> <span class="pl-k">FROM</span> <span class="pl-s"><span class="pl-pds">"</span>posts<span class="pl-pds">"</span></span>  <span class="pl-k">WHERE</span>
+  (<span class="pl-s"><span class="pl-pds">"</span>posts<span class="pl-pds">"</span></span>.<span class="pl-s"><span class="pl-pds">"</span>pinned<span class="pl-pds">"</span></span> <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">'</span>f<span class="pl-pds">'</span></span> <span class="pl-k">OR</span>
+   <span class="pl-s"><span class="pl-pds">"</span>posts<span class="pl-pds">"</span></span>.<span class="pl-s"><span class="pl-pds">"</span>pinned<span class="pl-pds">"</span></span> <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">'</span>t<span class="pl-pds">'</span></span> <span class="pl-k">AND</span> (
+      <span class="pl-s"><span class="pl-pds">"</span>posts<span class="pl-pds">"</span></span>.<span class="pl-s"><span class="pl-pds">"</span>published_at<span class="pl-pds">"</span></span> <span class="pl-k">&lt;</span> <span class="pl-s"><span class="pl-pds">'</span>2014-03-21 15:01:35.064096<span class="pl-pds">'</span></span> <span class="pl-k">OR</span>
+      <span class="pl-s"><span class="pl-pds">"</span>posts<span class="pl-pds">"</span></span>.<span class="pl-s"><span class="pl-pds">"</span>published_at<span class="pl-pds">"</span></span> <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">'</span>2014-03-21 15:01:35.064096<span class="pl-pds">'</span></span> <span class="pl-k">AND</span> <span class="pl-s"><span class="pl-pds">"</span>posts<span class="pl-pds">"</span></span>.<span class="pl-s"><span class="pl-pds">"</span>id<span class="pl-pds">"</span></span> <span class="pl-k">&lt;</span> <span class="pl-c1">9</span>))
+<span class="pl-k">ORDER BY</span>
+  <span class="pl-s"><span class="pl-pds">"</span>posts<span class="pl-pds">"</span></span>.<span class="pl-s"><span class="pl-pds">"</span>pinned<span class="pl-pds">"</span></span><span class="pl-k">=</span><span class="pl-s"><span class="pl-pds">'</span>t<span class="pl-pds">'</span></span> <span class="pl-k">DESC</span>, <span class="pl-s"><span class="pl-pds">"</span>posts<span class="pl-pds">"</span></span>.<span class="pl-s"><span class="pl-pds">"</span>pinned<span class="pl-pds">"</span></span><span class="pl-k">=</span><span class="pl-s"><span class="pl-pds">'</span>f<span class="pl-pds">'</span></span> <span class="pl-k">DESC</span>,
+  <span class="pl-s"><span class="pl-pds">"</span>posts<span class="pl-pds">"</span></span>.<span class="pl-s"><span class="pl-pds">"</span>published_at<span class="pl-pds">"</span></span> <span class="pl-k">DESC</span>,
+  <span class="pl-s"><span class="pl-pds">"</span>posts<span class="pl-pds">"</span></span>.<span class="pl-s"><span class="pl-pds">"</span>id<span class="pl-pds">"</span></span> <span class="pl-k">DESC</span>
+<span class="pl-k">LIMIT</span> <span class="pl-c1">1</span></pre></div>
+
+<p>The actual query is a bit different because <code>order_query</code> wraps the top-level <code>OR</code> with a (redundant) non-strict column <code>x0' AND (x0 OR ...)</code>
+for <a href="https://github.com/glebm/order_query/issues/3">performance reasons</a>.
+This can be disabled with <code>OrderQuery.wrap_top_level_or = false</code>.</p>
+
+<p>See the implementation in <a href="/lib/order_query/sql/where.rb">sql/where.rb</a>.</p>
+
+<p>See how this affects query planning in Markus Winand's slides on <a href="http://use-the-index-luke.com/blog/2013-07/pagination-done-the-postgresql-way">Pagination done the Right Way</a>.</p>
+
+<p>This project uses MIT license.</p>
+      </section>
+      <footer>
+        <p>This project is maintained by <a href="https://github.com/glebm">glebm</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+      </footer>
+    </div>
+    <script src="javascripts/scale.fix.js"></script>
+    
+  </body>
+</html>
