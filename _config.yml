@@ -1,0 +1,8 @@
+title: order_query
+description: Find next / previous Active Record(s) in one query
+google_analytics: UA-65961090-1
+show_downloads: true
+theme: jekyll-theme-slate
+
+gems:
+  - jekyll-mentions
